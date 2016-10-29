@@ -1,5 +1,8 @@
 # gxref - GNU Emacs xref backend using GNU Global
 
+A pretty simple (but, at least for me effective) backend for emacs 25 xref
+library, using GNU Global.
+
 ## Prerequisites:
 
 * GNU Global.
