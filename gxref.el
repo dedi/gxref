@@ -1,4 +1,4 @@
-;;; gxref.el --- GNU Emacs xref backend using GNU Global. -*- lexical-binding: t; -*-
+;;; gxref.el --- GNU Emacs 25 xref backend using GNU Global. -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2016 Dedi Hirschfeld
 
@@ -24,7 +24,7 @@
 ;;; Commentary:
 
 ;;
-;; A pretty simple (but, at least for me effective) backend for emacs 25 xref
+;; A pretty simple (but, at least for me effective) backend for Emacs 25 xref
 ;; library, using GNU Global.
 ;;
 ;; Prerequisites:
