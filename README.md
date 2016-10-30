@@ -1,6 +1,8 @@
+[![MELPA](https://melpa.org/packages/gxref-badge.svg)](https://melpa.org/#/gxref)
+
 # gxref - GNU Emacs xref backend using GNU Global
 
-A pretty simple (but, at least for me effective) backend for emacs 25 xref
+A pretty simple (but, at least for me, effective) backend for emacs 25 xref
 library, using GNU Global.
 
 ## Prerequisites:
@@ -18,22 +20,20 @@ keep up with API changes.
 
 ### Getting the package
 
-#### package.el
+#### Using package.el
 
-[![MELPA](https://melpa.org/packages/gxref-badge.svg)](https://melpa.org/#/gxref)
-
-Gxref is now available on `MELPA <https://melpa.org/#/getting-started>`.
-If you got MELPA set up, you can install it using 
+Gxref is now available on [MELPA](https://melpa.org/#/getting-started).
+Once you get MELPA set up, you can install gxref by typing 
 ```
 M-x package-install RET gxref RET
 ```
 
-#### Manual
+#### Manual Installation
 
 Clone the repository, and add it to your load path, or just download
-gxref.el and put it in a directory that is already in your search path.
+gxref.el and put it in a directory that is already in your load path.
 
-### Setting it up
+### Setting Up Gxref
 
 Add something like the following to your init.el file:
 
@@ -46,3 +46,5 @@ Add something like the following to your init.el file:
 * Generate DB at root
 * project.el integration.
 * Use process-environment to pass GTAGSROOT/GTAGSLABEL/etc.
+
+
