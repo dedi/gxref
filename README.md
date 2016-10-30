@@ -16,8 +16,28 @@ keep up with API changes.
 
 ## Installing:
 
+### Getting the package
+
+#### package.el
+
+[![MELPA](https://melpa.org/packages/gxref-badge.svg)](https://melpa.org/#/gxref)
+
+Gxref is now available on `MELPA <https://melpa.org/#/getting-started>`.
+If you got MELPA set up, you can install it using 
+```
+M-x package-install RET gxref RET
+```
+
+#### Manual
+
+Clone the repository, and add it to your load path, or just download
+gxref.el and put it in a directory that is already in your search path.
+
+### Setting it up
+
+Add something like the following to your init.el file:
+
 ```elisp
-(require 'gxref)
 (add-to-list 'xref-backend-functions 'gxref-xref-backend)
 ```
 
