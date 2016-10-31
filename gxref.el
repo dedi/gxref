@@ -47,7 +47,6 @@
 ;;
 ;; Generate DB at root
 ;; project.el integration.
-;; Use process-environment to pass GTAGSROOT/GTAGSLABEL/etc.
 ;;
 
 ;;; Code:
@@ -75,18 +74,43 @@
   :group 'gxref)
 
 
+(defvar-local gxref-gtags-root nil
+  "Root directory of the project. If not defined, 'global -p'
+will be used to find it.")
+
+(defvar-local gxref-gtags-conf nil
+  "explicit GTAGS/GLOBAL configuration file.")
+
+(defvar-local gxref-gtags-label nil
+  "explicit GTAGS/GLOBAL label.")
+
+(defvar-local gxref-gtags-lib-path nil
+  "explicit GLOBAL libpath.")
+
+
+(defun gxref--prepare-process-environment()
+  "Figure out the process environment to use for running GLOBAL/GTAGS"
+  (append process-environment
+    (when gxref-gtags-root     (list (concat "GTAGSROOT=" gxref-gtags-root)))
+    (when gxref-gtags-conf     (list (concat "GTAGSCONF=" gxref-gtags-conf)))
+    (when gxref-gtags-label    (list (concat "GTAGSLABEL=" gxref-gtags-label)))
+    (when gxref-gtags-lib-path (list (concat "GTAGSLIB=" gxref-gtags-lib-path))))
+  )
+
 (defun gxref--global-to-list (args)
   "Run GNU Global in an external process.  Return the output as a
 list of strings.  Return nil if an error occured.  ARGS is the
 list of arguments to use when running global"
+  (let ((process-environment (gxref--prepare-process-environment)))
   (condition-case nil
       (apply #'process-lines gxref-global-exe args)
-    (error nil)))
+    (error nil))))
 
 
-(defun gxref--db-path ()
-  "Return the GTAGS DB path for the current project.  Return nil if none."
-  (car (gxref--global-to-list '("-p"))))
+(defun gxref--find-project-root ()
+  "Return the project root for the current project.  Return nil if none."
+  (or gxref-gtags-root
+      (car (gxref--global-to-list '("-p")))))
 
 
 (defun gxref--make-xref-from-file-loc (file line column desc)
@@ -123,7 +147,7 @@ arguments to pass to GNU Global."
 (defun gxref-update-db ()
   "Update GTAGS project database for current project."
   (interactive)
-  (unless (gxref--db-path) (error "Not under a GTAGS project"))
+  (unless (gxref--find-project-root) (error "Not under a GTAGS project"))
   ;; TODO: We shoule probably call `call-process' directly, not
   ;; `gxref--global-to-list'`
   (gxref--global-to-list '("-u")))
@@ -131,7 +155,7 @@ arguments to pass to GNU Global."
 (defun gxref-single-update-db ()
   "Update GTAGS project database for the current file."
   (interactive)
-  (unless (gxref--db-path) (error "Not under a GTAGS project"))
+  (unless (gxref--find-project-root) (error "Not under a GTAGS project"))
   (unless (buffer-file-name) (error "Buffer has no file associated with it"))
   ;; `gxref--global-to-list'`
   (gxref--global-to-list (list "--single-update" (buffer-file-name))))
@@ -139,7 +163,8 @@ arguments to pass to GNU Global."
 
 (defun gxref--after-save-hook ()
   "After save hook to maybe update the GTAGS database with changed data."
-  (when (and gxref-update-db-on-save (buffer-file-name) (gxref--db-path))
+  (when (and gxref-update-db-on-save (buffer-file-name)
+             (gxref--find-project-root))
     (gxref-single-update-db)))
 
 (add-hook 'after-save-hook 'gxref--after-save-hook)
