@@ -138,16 +138,20 @@
   :group 'gxref)
 
 
+;;;###autoload
 (defvar-local gxref-gtags-root nil
   "Root directory of the project. If not defined, 'global -p'
 will be used to find it.")
 
+;;;###autoload
 (defvar-local gxref-gtags-conf nil
   "explicit GTAGS/GLOBAL configuration file.")
 
+;;;###autoload
 (defvar-local gxref-gtags-label nil
   "explicit GTAGS/GLOBAL label.")
 
+;;;###autoload
 (defvar-local gxref-gtags-lib-path nil
   "explicit GLOBAL libpath.")
 
