@@ -248,7 +248,9 @@ arguments to pass to GNU Global."
   'gxref)
 
 (cl-defmethod xref-backend-identifier-at-point ((_backend (eql gxref)))
-  (symbol-name (symbol-at-point)))
+  (let ((current-symbol (symbol-at-point)))
+    (when current-symbol
+      (symbol-name (current-symbol)))))
 
 (cl-defmethod xref-backend-definitions ((_backend (eql gxref)) symbol)
   (gxref--find-symbol symbol "-d"))
