@@ -250,7 +250,7 @@ arguments to pass to GNU Global."
 (cl-defmethod xref-backend-identifier-at-point ((_backend (eql gxref)))
   (let ((current-symbol (symbol-at-point)))
     (when current-symbol
-      (symbol-name (current-symbol)))))
+      (symbol-name current-symbol))))
 
 (cl-defmethod xref-backend-definitions ((_backend (eql gxref)) symbol)
   (gxref--find-symbol symbol "-d"))
