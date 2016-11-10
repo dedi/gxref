@@ -110,7 +110,9 @@
 ;; 
 ;; * Generate DB at root
 ;; * project.el integration.
-;; 
+;; * Declare gxref local and global modes so that user doesn't have to
+;;   explicitly set xref-backend-functions.
+;;
 
 
 ;;; Code:
@@ -139,9 +141,20 @@
 
 
 ;;;###autoload
+(defcustom gxref-project-root-dir nil
+  "The root directory of the project.
+If not defined, 'global -p' will be used to find it."
+  :type '(radio (const :tag "None" nil)
+                 directory)
+  :safe 'directory-name-p
+  )
+
+;;;###autoload
 (defvar-local gxref-gtags-root nil
-  "Root directory of the project. If not defined, 'global -p'
-will be used to find it.")
+  "DEPRECATED. Use `gxref-project-root-dir' instead.
+Root directory of the project. If not defined, 'global -p' will
+be used to find it.")
+
 
 ;;;###autoload
 (defvar-local gxref-gtags-conf nil
@@ -156,19 +169,30 @@ will be used to find it.")
   "explicit GLOBAL libpath.")
 
 
+
+(defun gxref--get-gtags-root-dir ()
+    "Figure out the user-configured root directory.
+This uses either `gxref-project-root-dir' variable, or, failing that, the
+deprecated `gxref-gtags-root' variable."
+    (or gxref-project-root-dir gxref-gtags-root))
+
+
 (defun gxref--prepare-process-environment()
   "Figure out the process environment to use for running GLOBAL/GTAGS"
-  (append process-environment
-    (when gxref-gtags-root     (list (concat "GTAGSROOT=" gxref-gtags-root)))
-    (when gxref-gtags-conf     (list (concat "GTAGSCONF=" gxref-gtags-conf)))
-    (when gxref-gtags-label    (list (concat "GTAGSLABEL=" gxref-gtags-label)))
-    (when gxref-gtags-lib-path (list (concat "GTAGSLIB=" gxref-gtags-lib-path))))
+  (append
+   process-environment
+   (when (gxref--get-gtags-root-dir)
+     (list (concat "GTAGSROOT=" (gxref--get-gtags-root-dir))))
+   (when gxref-gtags-conf     (list (concat "GTAGSCONF=" gxref-gtags-conf)))
+   (when gxref-gtags-label    (list (concat "GTAGSLABEL=" gxref-gtags-label)))
+   (when gxref-gtags-lib-path (list (concat "GTAGSLIB=" gxref-gtags-lib-path))))
   )
 
 (defun gxref--global-to-list (args)
-  "Run GNU Global in an external process.  Return the output as a
-list of strings.  Return nil if an error occured.  ARGS is the
-list of arguments to use when running global"
+  "Run GNU Global in an external process.
+Return the output as a list of strings.  Return nil if an error
+occured.  ARGS is the list of arguments to use when running
+global"
   (let ((process-environment (gxref--prepare-process-environment)))
   (condition-case nil
       (apply #'process-lines gxref-global-exe args)
@@ -189,10 +213,13 @@ a description of it."
 
 
 (defun gxref--make-xref-from-gtags-x-line (ctags-x-line)
-  "Create and return an xref object pointing to a file location,
-based on global -x output line CTAGS-X-LINE.  If the line does
-not match the expected format, return nil."
-  (if (string-match "^\\([^ \t]+\\)[ \t]+\\([0-9]+\\)[ \t]+\\([^ \t\]+\\)[ \t]+\\(.*\\)" ctags-x-line)
+  "Create and return an xref object pointing to a file location.
+This uses the output of a based on global -x output line provided
+in CTAGS-X-LINE argument.  If the line does not match the
+expected format, return nil."
+  (if (string-match
+       "^\\([^ \t]+\\)[ \t]+\\([0-9]+\\)[ \t]+\\([^ \t\]+\\)[ \t]+\\(.*\\)"
+       ctags-x-line)
       (gxref--make-xref-from-file-loc (match-string 3 ctags-x-line)
             (string-to-number (match-string 2 ctags-x-line))
             0
@@ -201,9 +228,9 @@ not match the expected format, return nil."
 
 
 (defun gxref--find-symbol (symbol &rest args)
-  "Run GNU Global to find a symbol SYMBOL.  Return the results as a list
-of xref location objects.  ARGS are any additional command line
-arguments to pass to GNU Global."
+  "Run GNU Global to find a symbol SYMBOL.
+Return the results as a list of xref location objects.  ARGS are
+any additional command line arguments to pass to GNU Global."
   (let* ((process-args
           (append args
                   (list "-x" "-a" (shell-quote-argument symbol))))
@@ -241,6 +268,36 @@ arguments to pass to GNU Global."
 ;;
 ;; gxref backend definition.
 ;;
+
+;;;###autoload
+(defun gxref-set-project-dir (project-dir)
+  "Explicitly Set the directory of the current project to PROJECT-DIR.
+The given project dir will be used for locating the GTAGS file,
+until a different project is selected, or `gxref-clear-project-dir'
+is called to clear the project.
+
+This function is provided as a convenience, but there are other
+ways to determine the current project, which could sometimes be
+more comfortable.  One option is to not set the project at all,
+in which case a search is performed upwards from the current
+directory, until a GTAGS file is found.  Alternatively, you could
+explicitly set the variable `gxref-project-root-dir'.  This has
+the same effect as using this function, but can be by setting a
+file-local or dir-local variable."
+  (interactive "DProject Directory: ")
+  (setq gxref-project-root-dir (expand-file-name project-dir)
+  ))
+
+;;;###autoload
+(defun gxref-clear-project-dir ()
+  "Explicitly clear the project directory.
+When no project directory is set, a project directory is
+determined by searching upwards from the current directory, until
+a GTAGS file is found.  See `gxref-set-project-dir' for more details."
+  (interactive)
+  (setq gxref-project-root-dir nil)
+  )
+
 
 ;;;###autoload
 (defun gxref-xref-backend ()
