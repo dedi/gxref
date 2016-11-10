@@ -157,16 +157,16 @@ be used to find it.")
 
 
 ;;;###autoload
-(defvar-local gxref-gtags-conf nil
-  "explicit GTAGS/GLOBAL configuration file.")
+(defvar gxref-gtags-conf nil
+  "Explicit GTAGS/GLOBAL configuration file.")
 
 ;;;###autoload
-(defvar-local gxref-gtags-label nil
-  "explicit GTAGS/GLOBAL label.")
+(defvar gxref-gtags-label nil
+  "Explicit GTAGS/GLOBAL label.")
 
 ;;;###autoload
-(defvar-local gxref-gtags-lib-path nil
-  "explicit GLOBAL libpath.")
+(defvar gxref-gtags-lib-path nil
+  "Explicit GLOBAL libpath.")
 
 
 
