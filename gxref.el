@@ -294,10 +294,16 @@ If DISPLAY is true, display the process buffer.  Return the new process."
     make-db-process
   ))
 
+
+;;;###autoload
 (defun gxref-create-db (project-root-dir)
   "Create a GTAGS database in the directory specified as PROJECT-ROOT-DIR."
   (interactive "DCreate db in directory: ")
-  (gxref--create-db-internal project-root-dir))
+    (set-process-sentinel
+     (gxref--create-db-internal gxref-project-root-dir)
+     (lambda (_process event)
+       (message "Gxref tag %s: %s" project-dir
+                (replace-regexp-in-string "\n+$" "" event)))))
 
 
 ;;;###autoload
