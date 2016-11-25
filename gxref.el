@@ -310,6 +310,9 @@ If DISPLAY is true, display the process buffer.  Return the new process."
   (interactive "DCreate db in directory: ")
     (set-process-sentinel
      (gxref--create-db-internal project-root-dir)
+     ;; TODO: make sure external process succeeded, and offer the user
+     ;; a chance to set gxref-project-root-dir if it seems like we
+     ;; created the project not in or above current directory.
      (lambda (_process event)
        (message "Gxref tag %s: %s" project-root-dir
                 (replace-regexp-in-string "\n+$" "" event)))))
