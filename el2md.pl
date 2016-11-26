@@ -21,6 +21,7 @@ sub write_header
 {
     print <<"EOT";
 [![MELPA](https://melpa.org/packages/gxref-badge.svg)](https://melpa.org/#/gxref)
+[![MELPA Stable](https://stable.melpa.org/packages/gxref-badge.svg)](https://stable.melpa.org/#/gxref)
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 # [gxref][Repository] - GNU Emacs xref backend using GNU Global
