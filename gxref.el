@@ -244,7 +244,7 @@ expected format, return nil."
             (string-to-number (match-string 2 ctags-x-line))
             0
             (match-string 4 ctags-x-line))
-    nil))
+    ))
 
 
 (defun gxref--find-symbol (symbol &rest args)
@@ -255,8 +255,9 @@ any additional command line arguments to pass to GNU Global."
           (append args
                   (list "-x" "-a" (shell-quote-argument symbol))))
          (global-output (gxref--global-to-list process-args)))
-    (mapcar #'gxref--make-xref-from-gtags-x-line global-output)
-    ))
+    (remove nil
+            (mapcar #'gxref--make-xref-from-gtags-x-line global-output)
+            )))
 
 
 ;;;; Interactive commands.
