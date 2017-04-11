@@ -180,15 +180,23 @@ If not defined, 'global -p' will be used to find it."
 
 ;;;###autoload
 (defcustom gxref-gtags-conf nil
-  "Explicit GTAGS/GLOBAL configuration file.")
+  "Explicit GTAGS/GLOBAL configuration file."
+  :type '(radio (const :tag "None" nil)
+                file)
+  :safe 'file-name-absolute-p)
 
 ;;;###autoload
 (defcustom gxref-gtags-label nil
-  "Explicit GTAGS/GLOBAL label.")
+  "Explicit GTAGS/GLOBAL label."
+  :type '(radio (const :tag "None" nil)
+                string))
 
 ;;;###autoload
 (defcustom gxref-gtags-lib-path nil
-  "Explicit GLOBAL libpath.")
+  "Explicit GLOBAL libpath."
+  :type '(radio (const :tag "None" nil)
+                 directory)
+  :safe 'directory-name-p)
 
 
 
