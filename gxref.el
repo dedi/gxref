@@ -369,7 +369,10 @@ a GTAGS file is found.  See `gxref-set-project-dir' for more details."
 ;;;###autoload
 (defun gxref-xref-backend ()
   "Gxref backend for Xref."
-  'gxref)
+  (when (or gxref-project-root-dir
+            (gxref--find-project-root))
+    'gxref)
+  )
 
 (cl-defmethod xref-backend-identifier-at-point ((_backend (eql gxref)))
   (let ((current-symbol (symbol-at-point)))
