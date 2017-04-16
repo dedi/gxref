@@ -211,15 +211,33 @@ If not defined, 'global -p' will be used to find it."
    (when gxref-gtags-lib-path (list (concat "GTAGSLIB=" gxref-gtags-lib-path))))
   )
 
+
+(defun gxref--create-db-ask ()
+  "Ask whether to create db."
+  (when (yes-or-no-p "No index found. Create now?")
+    (call-interactively 'gxref-create-db)))
+
+
 (defun gxref--global-to-list (args)
   "Run GNU Global in an external process.
 Return the output as a list of strings.  Return nil if an error
 occured.  ARGS is the list of arguments to use when running
 global"
   (let ((process-environment (gxref--prepare-process-environment)))
-  (condition-case nil
+  (condition-case err
       (apply #'process-lines gxref-global-exe args)
-    (error nil))))
+    (error
+     ;; If we're called with -p, ie just to find the project directory, we may
+     ;; be called from gxref--after-save-hook, from any file, so ignore this
+     ;; case and just return nil. Otherwise if the signal-data is exactly
+     ;; "global exited with status 3" this means that global did not find an
+     ;; index. Unfortunately the return values are not documented in the man
+     ;; page of global, so this relies on observed behaviour.
+     (when (and (not (member "-p" args))
+                (string= (cadr err)
+                         (concat gxref-global-exe " exited with status 3")))
+       (gxref--create-db-ask))
+       nil))))
 
 
 (defun gxref--global-find-project ()
