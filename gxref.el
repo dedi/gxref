@@ -244,19 +244,33 @@ FILE, LINE, and COLUMN point to the location of the xref, DESC is
 a description of it."
   (xref-make desc (xref-make-file-location file line column)))
 
+(defun gxref--decode-path (path)
+  "Decode percent-encoded ASCII characters in GNU Global PATH.
+Decode each escape once, so an encoded percent sign does not cause
+a second decoding pass."
+  (save-match-data
+    (replace-regexp-in-string
+     "%[[:xdigit:]]\\{2\\}"
+     (lambda (escape)
+       (char-to-string
+        (string-to-number (substring escape 1) 16)))
+     path t t)))
 
 (defun gxref--make-xref-from-gtags-x-line (ctags-x-line)
   "Create and return an xref object pointing to a file location.
-This uses the output of a based on global -x output line provided
-in CTAGS-X-LINE argument.  If the line does not match the
-expected format, return nil."
-  (if (string-match
+
+CTAGS-X-LINE is a GNU Global -x output line whose filename has
+whitespace and percent signs encoded with --encode-path.
+Decode the filename before creating the location.
+If the line does not match the expected format, return nil."
+  (when (string-match
        "^\\([^ \t]+\\)[ \t]+\\([0-9]+\\)[ \t]+\\([^ \t\]+\\)[ \t]+\\(.*\\)"
        ctags-x-line)
-      (gxref--make-xref-from-file-loc (match-string 3 ctags-x-line)
-            (string-to-number (match-string 2 ctags-x-line))
-            0
-            (match-string 4 ctags-x-line))))
+      (let ((file (match-string 3 ctags-x-line))
+            (line (string-to-number (match-string 2 ctags-x-line)))
+            (desc (match-string 4 ctags-x-line)))
+        (gxref--make-xref-from-file-loc
+         (gxref--decode-path file) line 0 desc))))
 
 
 (defun gxref--find-symbol (symbol &rest args)
@@ -265,7 +279,9 @@ Return the results as a list of xref location objects.  ARGS are
 any additional command line arguments to pass to GNU Global."
   (let* ((process-args
           (append args
-                  (list "-x" "-a" (shell-quote-argument symbol))))
+                  ;; Encode field delimiters and the escape character.
+                  (list "-x" "-a" "--encode-path= \t\r\n%"
+                        (shell-quote-argument symbol))))
          (global-output (gxref--global-to-list process-args)))
     (remove nil
             (mapcar #'gxref--make-xref-from-gtags-x-line global-output))))
