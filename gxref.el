@@ -167,11 +167,10 @@
   :type 'boolean
   :group 'gxref)
 
-
 ;;;###autoload
 (defcustom gxref-project-root-dir nil
   "The root directory of the project.
-If not defined, 'global -p' will be used to find it."
+If not defined, \\='global -p\\=' will be used to find it."
   :type '(radio (const :tag "None" nil)
                  directory)
   :safe 'directory-name-p
@@ -390,7 +389,7 @@ a GTAGS file is found.  See `gxref-set-project-dir' for more details."
 
 (cl-defmethod
     xref-backend-identifier-completion-table ((_backend (eql gxref)))
-  "Return a list of terms for completions taken from the symbols in the current buffer.
+  "Return list of terms for completions based on current buffer symbols.
 The current implementation returns all the words in the buffer,
 which is really sub optimal."
   (gxref--global-to-list '("-c")))
