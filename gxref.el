@@ -197,15 +197,14 @@ If not defined, \\='global -p\\=' will be used to find it."
   :safe 'directory-name-p)
 
 (defcustom gxref-use-local-symbols-for-completion-table nil
-  "When non-nil only provide local symbols as completion table.
-By default the `xref-backend-identifier-completion-table' method returns
-all symbols extracted from the GNU Global database.
-If `gxref-use-local-symbols-for-completion-table' is non-nil, then
-``xref-backend-identifier-completion-table'' only returns the symbols
-extracted from the current buffer."
+  "Use symbol-like strings from the current buffer for completion if non-nil.
+If nil (the default), use names returned by GNU Global's `global -c':
+names with indexed definitions in GTAGS, not names found only as references.
+
+If non-nil, collect distinct symbol-like strings from the entire current
+buffer code, including text outside the narrowed region, using its syntax table."
   :group 'gxref
-  :type 'boolean
-  :safe 'booleanp)
+  :type 'boolean)
 
 (defun gxref--prepare-process-environment()
   "Figure out the process environment to use for running GLOBAL/GTAGS"
@@ -366,7 +365,6 @@ a GTAGS file is found.  See `gxref-set-project-dir' for more details."
 
 ;;;; gxref backend definition.
 
-
 ;;;###autoload
 (defun gxref-xref-backend ()
   "Gxref backend for Xref.
@@ -392,14 +390,17 @@ backend."
   (gxref--find-symbol symbol "-g"))
 
 (cl-defmethod xref-backend-identifier-completion-table ((_backend (eql gxref)))
-  "Return list of terms for completions.
+  "Return a list of identifier completion candidates.
+If `gxref-use-local-symbols-for-completion-table' is nil, return
+names with indexed definitions from GNU Global, using `global -c'.
 
-If `gxref-use-local-symbols-for-completion-table' is nil (the default),
-the list covers all symbols in the project extracted from the GNU Global
-symbol database.  If it is non-nil the list only covers the symbols
-extracted from the current buffer using the current syntax table."
+Otherwise, collect distinct symbol-like strings from the entire
+current buffer, including text outside the narrowed region.
+Exclude candidates that start inside strings or comments according
+to the current major mode's syntax information.
+However, numbers and keywords can still become candidates.
+Candidates are not validated as language-specific identifiers."
   (if gxref-use-local-symbols-for-completion-table
-      ;; Return local buffer symbols
       (save-match-data
         (save-excursion
           (save-restriction
@@ -408,12 +409,20 @@ extracted from the current buffer using the current syntax table."
             (let ((seen (make-hash-table :test #'equal))
                   candidates)
               (while (re-search-forward "\\(?:\\sw\\|\\s_\\)+" nil t)
-                (let ((name (match-string-no-properties 0)))
-                  (unless (gethash name seen)
-                    (puthash name t seen)
-                    (push name candidates))))
+                ;; Capture the match before syntax parsing can change match data.
+                (let* ((start (match-beginning 0))
+                       (name (match-string-no-properties 0)))
+                  ;; exclude integer numbers
+                  (unless (or (string-match-p "\\`[0-9]+\\'" name)
+                              (gethash name seen))
+                    (let ((syntax (save-excursion
+                                    (syntax-ppss start))))
+                      (unless (or (nth 3 syntax)  ; Inside a string.
+                                  (nth 4 syntax)) ; Inside a comment.
+                        (puthash name t seen)
+                        (push name candidates))))))
               (nreverse candidates)))))
-    ;; otherwise return all symbols identified by GNU Global database
+    ;; Return names with indexed definitions from GNU Global.
     (gxref--global-to-list '("-c"))))
 
 (provide 'gxref)
