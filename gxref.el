@@ -196,7 +196,16 @@ If not defined, \\='global -p\\=' will be used to find it."
                  directory)
   :safe 'directory-name-p)
 
-
+(defcustom gxref-use-local-symbols-for-completion-table nil
+  "When non-nil only provide local symbols as completion table.
+By default the `xref-backend-identifier-completion-table' method returns
+all symbols extracted from the GNU Global database.
+If `gxref-use-local-symbols-for-completion-table' is non-nil, then
+``xref-backend-identifier-completion-table'' only returns the symbols
+extracted from the current buffer."
+  :group 'gxref
+  :type 'boolean
+  :safe 'booleanp)
 
 (defun gxref--prepare-process-environment()
   "Figure out the process environment to use for running GLOBAL/GTAGS"
@@ -382,12 +391,30 @@ backend."
 (cl-defmethod xref-backend-apropos ((_backend (eql gxref)) symbol)
   (gxref--find-symbol symbol "-g"))
 
-(cl-defmethod
-  xref-backend-identifier-completion-table ((_backend (eql gxref)))
-  "Return list of terms for completions from the GNU Global symbol database.
-The list covers all symbols in the project, not only the current buffer."
-  (gxref--global-to-list '("-c")))
+(cl-defmethod xref-backend-identifier-completion-table ((_backend (eql gxref)))
+  "Return list of terms for completions.
 
+If `gxref-use-local-symbols-for-completion-table' is nil (the default),
+the list covers all symbols in the project extracted from the GNU Global
+symbol database.  If it is non-nil the list only covers the symbols
+extracted from the current buffer using the current syntax table."
+  (if gxref-use-local-symbols-for-completion-table
+      ;; Return local buffer symbols
+      (save-match-data
+        (save-excursion
+          (save-restriction
+            (widen)
+            (goto-char (point-min))
+            (let ((seen (make-hash-table :test #'equal))
+                  candidates)
+              (while (re-search-forward "\\(?:\\sw\\|\\s_\\)+" nil t)
+                (let ((name (match-string-no-properties 0)))
+                  (unless (gethash name seen)
+                    (puthash name t seen)
+                    (push name candidates))))
+              (nreverse candidates)))))
+    ;; otherwise return all symbols identified by GNU Global database
+    (gxref--global-to-list '("-c"))))
 
 (provide 'gxref)
 ;;; gxref.el ends here
