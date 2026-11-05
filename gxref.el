@@ -173,8 +173,7 @@
 If not defined, \\='global -p\\=' will be used to find it."
   :type '(radio (const :tag "None" nil)
                  directory)
-  :safe 'directory-name-p
-  )
+  :safe 'directory-name-p)
 
 
 ;;;###autoload
@@ -207,8 +206,7 @@ If not defined, \\='global -p\\=' will be used to find it."
      (list (concat "GTAGSROOT=" gxref-project-root-dir)))
    (when gxref-gtags-conf     (list (concat "GTAGSCONF=" gxref-gtags-conf)))
    (when gxref-gtags-label    (list (concat "GTAGSLABEL=" gxref-gtags-label)))
-   (when gxref-gtags-lib-path (list (concat "GTAGSLIB=" gxref-gtags-lib-path))))
-  )
+   (when gxref-gtags-lib-path (list (concat "GTAGSLIB=" gxref-gtags-lib-path)))))
 
 (defun gxref--global-to-list (args)
   "Run GNU Global in an external process.
@@ -250,8 +248,7 @@ expected format, return nil."
       (gxref--make-xref-from-file-loc (match-string 3 ctags-x-line)
             (string-to-number (match-string 2 ctags-x-line))
             0
-            (match-string 4 ctags-x-line))
-    ))
+            (match-string 4 ctags-x-line))))
 
 
 (defun gxref--find-symbol (symbol &rest args)
@@ -263,8 +260,7 @@ any additional command line arguments to pass to GNU Global."
                   (list "-x" "-a" (shell-quote-argument symbol))))
          (global-output (gxref--global-to-list process-args)))
     (remove nil
-            (mapcar #'gxref--make-xref-from-gtags-x-line global-output)
-            )))
+            (mapcar #'gxref--make-xref-from-gtags-x-line global-output))))
 
 
 ;;;; Interactive commands.
@@ -308,8 +304,7 @@ If DISPLAY is true, display the process buffer.  Return the new process."
                           gtags-buffer
                           gxref-create-db-cmd)))
     (when display (display-buffer gtags-buffer))
-    make-db-process
-  ))
+    make-db-process))
 
 
 ;;;###autoload
@@ -349,8 +344,7 @@ file-local or dir-local variable."
      (gxref--create-db-internal gxref-project-root-dir)
      (lambda (_process event)
        (message "Gxref tag %s: %s" project-dir
-                (replace-regexp-in-string "\n+$" "" event)))
-  )))
+                (replace-regexp-in-string "\n+$" "" event))))))
 
 ;;;###autoload
 (defun gxref-clear-project-dir ()
@@ -359,19 +353,20 @@ When no project directory is set, a project directory is
 determined by searching upwards from the current directory, until
 a GTAGS file is found.  See `gxref-set-project-dir' for more details."
   (interactive)
-  (setq gxref-project-root-dir nil)
-  )
+  (setq gxref-project-root-dir nil))
 
 ;;;; gxref backend definition.
 
 
 ;;;###autoload
 (defun gxref-xref-backend ()
-  "Gxref backend for Xref."
+  "Gxref backend for Xref.
+Return \\='gxref when it can be a valid backend for the current buffer,
+otherwise return nil to allow xref to skip it and try the next possible
+backend."
   (when (or gxref-project-root-dir
             (gxref--find-project-root))
-    'gxref)
-  )
+    'gxref))
 
 (cl-defmethod xref-backend-identifier-at-point ((_backend (eql gxref)))
   (let ((current-symbol (symbol-at-point)))
@@ -388,10 +383,9 @@ a GTAGS file is found.  See `gxref-set-project-dir' for more details."
   (gxref--find-symbol symbol "-g"))
 
 (cl-defmethod
-    xref-backend-identifier-completion-table ((_backend (eql gxref)))
-  "Return list of terms for completions based on current buffer symbols.
-The current implementation returns all the words in the buffer,
-which is really sub optimal."
+  xref-backend-identifier-completion-table ((_backend (eql gxref)))
+  "Return list of terms for completions from the GNU Global symbol database.
+The list covers all symbols in the project, not only the current buffer."
   (gxref--global-to-list '("-c")))
 
 
