@@ -167,15 +167,13 @@
   :type 'boolean
   :group 'gxref)
 
-
 ;;;###autoload
 (defcustom gxref-project-root-dir nil
   "The root directory of the project.
-If not defined, 'global -p' will be used to find it."
+If not defined, \\='global -p\\=' will be used to find it."
   :type '(radio (const :tag "None" nil)
                  directory)
-  :safe 'directory-name-p
-  )
+  :safe 'directory-name-p)
 
 
 ;;;###autoload
@@ -198,7 +196,15 @@ If not defined, 'global -p' will be used to find it."
                  directory)
   :safe 'directory-name-p)
 
+(defcustom gxref-use-local-symbols-for-completion-table nil
+  "Use symbol-like strings from the current buffer for completion if non-nil.
+If nil (the default), use names returned by GNU Global's `global -c':
+names with indexed definitions in GTAGS, not names found only as references.
 
+If non-nil, collect distinct symbol-like strings from the entire current
+buffer code, including text outside the narrowed region, using its syntax table."
+  :group 'gxref
+  :type 'boolean)
 
 (defun gxref--prepare-process-environment()
   "Figure out the process environment to use for running GLOBAL/GTAGS"
@@ -208,8 +214,7 @@ If not defined, 'global -p' will be used to find it."
      (list (concat "GTAGSROOT=" gxref-project-root-dir)))
    (when gxref-gtags-conf     (list (concat "GTAGSCONF=" gxref-gtags-conf)))
    (when gxref-gtags-label    (list (concat "GTAGSLABEL=" gxref-gtags-label)))
-   (when gxref-gtags-lib-path (list (concat "GTAGSLIB=" gxref-gtags-lib-path))))
-  )
+   (when gxref-gtags-lib-path (list (concat "GTAGSLIB=" gxref-gtags-lib-path)))))
 
 (defun gxref--global-to-list (args)
   "Run GNU Global in an external process.
@@ -239,20 +244,33 @@ FILE, LINE, and COLUMN point to the location of the xref, DESC is
 a description of it."
   (xref-make desc (xref-make-file-location file line column)))
 
+(defun gxref--decode-path (path)
+  "Decode percent-encoded ASCII characters in GNU Global PATH.
+Decode each escape once, so an encoded percent sign does not cause
+a second decoding pass."
+  (save-match-data
+    (replace-regexp-in-string
+     "%[[:xdigit:]]\\{2\\}"
+     (lambda (escape)
+       (char-to-string
+        (string-to-number (substring escape 1) 16)))
+     path t t)))
 
 (defun gxref--make-xref-from-gtags-x-line (ctags-x-line)
   "Create and return an xref object pointing to a file location.
-This uses the output of a based on global -x output line provided
-in CTAGS-X-LINE argument.  If the line does not match the
-expected format, return nil."
-  (if (string-match
+
+CTAGS-X-LINE is a GNU Global -x output line whose filename has
+whitespace and percent signs encoded with --encode-path.
+Decode the filename before creating the location.
+If the line does not match the expected format, return nil."
+  (when (string-match
        "^\\([^ \t]+\\)[ \t]+\\([0-9]+\\)[ \t]+\\([^ \t\]+\\)[ \t]+\\(.*\\)"
        ctags-x-line)
-      (gxref--make-xref-from-file-loc (match-string 3 ctags-x-line)
-            (string-to-number (match-string 2 ctags-x-line))
-            0
-            (match-string 4 ctags-x-line))
-    ))
+      (let ((file (match-string 3 ctags-x-line))
+            (line (string-to-number (match-string 2 ctags-x-line)))
+            (desc (match-string 4 ctags-x-line)))
+        (gxref--make-xref-from-file-loc
+         (gxref--decode-path file) line 0 desc))))
 
 
 (defun gxref--find-symbol (symbol &rest args)
@@ -261,11 +279,12 @@ Return the results as a list of xref location objects.  ARGS are
 any additional command line arguments to pass to GNU Global."
   (let* ((process-args
           (append args
-                  (list "-x" "-a" (shell-quote-argument symbol))))
+                  ;; Encode field delimiters and the escape character.
+                  (list "-x" "-a" "--encode-path= \t\r\n%"
+                        (shell-quote-argument symbol))))
          (global-output (gxref--global-to-list process-args)))
     (remove nil
-            (mapcar #'gxref--make-xref-from-gtags-x-line global-output)
-            )))
+            (mapcar #'gxref--make-xref-from-gtags-x-line global-output))))
 
 
 ;;;; Interactive commands.
@@ -309,8 +328,7 @@ If DISPLAY is true, display the process buffer.  Return the new process."
                           gtags-buffer
                           gxref-create-db-cmd)))
     (when display (display-buffer gtags-buffer))
-    make-db-process
-  ))
+    make-db-process))
 
 
 ;;;###autoload
@@ -350,8 +368,7 @@ file-local or dir-local variable."
      (gxref--create-db-internal gxref-project-root-dir)
      (lambda (_process event)
        (message "Gxref tag %s: %s" project-dir
-                (replace-regexp-in-string "\n+$" "" event)))
-  )))
+                (replace-regexp-in-string "\n+$" "" event))))))
 
 ;;;###autoload
 (defun gxref-clear-project-dir ()
@@ -360,19 +377,19 @@ When no project directory is set, a project directory is
 determined by searching upwards from the current directory, until
 a GTAGS file is found.  See `gxref-set-project-dir' for more details."
   (interactive)
-  (setq gxref-project-root-dir nil)
-  )
+  (setq gxref-project-root-dir nil))
 
 ;;;; gxref backend definition.
 
-
 ;;;###autoload
 (defun gxref-xref-backend ()
-  "Gxref backend for Xref."
+  "Gxref backend for Xref.
+Return \\='gxref when it can be a valid backend for the current buffer,
+otherwise return nil to allow xref to skip it and try the next possible
+backend."
   (when (or gxref-project-root-dir
             (gxref--find-project-root))
-    'gxref)
-  )
+    'gxref))
 
 (cl-defmethod xref-backend-identifier-at-point ((_backend (eql gxref)))
   (let ((current-symbol (symbol-at-point)))
@@ -388,13 +405,41 @@ a GTAGS file is found.  See `gxref-set-project-dir' for more details."
 (cl-defmethod xref-backend-apropos ((_backend (eql gxref)) symbol)
   (gxref--find-symbol symbol "-g"))
 
-(cl-defmethod
-    xref-backend-identifier-completion-table ((_backend (eql gxref)))
-  "Return a list of terms for completions taken from the symbols in the current buffer.
-The current implementation returns all the words in the buffer,
-which is really sub optimal."
-  (gxref--global-to-list '("-c")))
+(cl-defmethod xref-backend-identifier-completion-table ((_backend (eql gxref)))
+  "Return a list of identifier completion candidates.
+If `gxref-use-local-symbols-for-completion-table' is nil, return
+names with indexed definitions from GNU Global, using `global -c'.
 
+Otherwise, collect distinct symbol-like strings from the entire
+current buffer, including text outside the narrowed region.
+Exclude candidates that start inside strings or comments according
+to the current major mode's syntax information.
+However, numbers and keywords can still become candidates.
+Candidates are not validated as language-specific identifiers."
+  (if gxref-use-local-symbols-for-completion-table
+      (save-match-data
+        (save-excursion
+          (save-restriction
+            (widen)
+            (goto-char (point-min))
+            (let ((seen (make-hash-table :test #'equal))
+                  candidates)
+              (while (re-search-forward "\\(?:\\sw\\|\\s_\\)+" nil t)
+                ;; Capture the match before syntax parsing can change match data.
+                (let* ((start (match-beginning 0))
+                       (name (match-string-no-properties 0)))
+                  ;; exclude integer numbers
+                  (unless (or (string-match-p "\\`[0-9]+\\'" name)
+                              (gethash name seen))
+                    (let ((syntax (save-excursion
+                                    (syntax-ppss start))))
+                      (unless (or (nth 3 syntax)  ; Inside a string.
+                                  (nth 4 syntax)) ; Inside a comment.
+                        (puthash name t seen)
+                        (push name candidates))))))
+              (nreverse candidates)))))
+    ;; Return names with indexed definitions from GNU Global.
+    (gxref--global-to-list '("-c"))))
 
 (provide 'gxref)
 ;;; gxref.el ends here
